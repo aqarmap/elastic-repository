@@ -38,6 +38,13 @@ class QueryBuilder implements SearchInRangeContract, SearchContract
     protected $whereNot = [];
 
     /**
+     * The query whereNotIn clauses.
+     *
+     * @var array
+     */
+    protected $whereNotIn = [];
+
+    /**
      * The query in range clauses.
      *
      * @var array
@@ -94,6 +101,20 @@ class QueryBuilder implements SearchInRangeContract, SearchContract
     public function whereNot($attribute, $value = null, $boost = 1.0)
     {
         $this->whereNot[] = [$attribute, $value, $boost ?: 1.0];
+        return $this;
+    }
+
+    /**
+     * Add a "Where Not In" clause to the query.
+     *
+     * @param string $attribute
+     * @param null $value
+     * @param float $boost
+     * @return $this
+     */
+    public function whereNotIn($attribute, $value = null)
+    {
+        $this->whereNotIn[] = [$attribute, $value];
         return $this;
     }
 
@@ -172,6 +193,7 @@ class QueryBuilder implements SearchInRangeContract, SearchContract
     {
         $this->where = [];
         $this->whereNot = [];
+        $this->whereNotIn = [];
         $this->inRange = [];
         $this->notInRange = [];
         $this->exist = [];
@@ -197,6 +219,11 @@ class QueryBuilder implements SearchInRangeContract, SearchContract
         //prepare where not conditions
         foreach ($this->whereNot as $whereNot) {
             $this->prepareWhereNotCondition($whereNot);
+        }
+
+        //prepare where not in conditions
+        foreach ($this->whereNotIn as $whereNotIn) {
+            $this->prepareWhereNotInCondition($whereNotIn);
         }
 
         // Add a basic range clause to the query
@@ -275,6 +302,18 @@ class QueryBuilder implements SearchInRangeContract, SearchContract
         list($attribute, $value, $boost) = array_pad($whereNot, 3, null);
         $subFilter = new Term();
         $subFilter->setTerm($attribute, $value, $boost);
+        $this->filter->addMustNot($subFilter);
+    }
+
+    /**
+     * add where not in condition to main filter
+     * @param $whereNotIn
+     */
+    private function prepareWhereNotInCondition($whereNotIn)
+    {
+        list($attribute, $value) = array_pad($whereNotIn, 2, null);
+        $subFilter = new Terms();
+        $subFilter->setTerms($attribute, $value);
         $this->filter->addMustNot($subFilter);
     }
 
